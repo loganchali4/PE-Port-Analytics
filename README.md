@@ -140,3 +140,35 @@ st.write(f"Coefficient: {model.coef_[0]:.4f}, Intercept: {model.intercept_:.4f},
 fig_reg = px.scatter(reg_data, x="rev_growth", y="quarterly_return", trendline="ols",
                      title="Regression: Revenue Growth vs Quarterly Returns")
 st.plotly_chart(fig_reg)
+
+
+-- Average revenue growth by sector
+SELECT sector, 
+       AVG(revenue - LAG(revenue) OVER (PARTITION BY ticker ORDER BY date)) AS avg_rev_growth
+FROM fundamentals
+GROUP BY sector;
+
+
+
+-- Top 10 tickers by last quarter revenue growth
+WITH rev_growth AS (
+    SELECT ticker,
+           date,
+           (revenue - LAG(revenue) OVER (PARTITION BY ticker ORDER BY date)) / NULLIF(LAG(revenue) OVER (PARTITION BY ticker ORDER BY date),0) AS rev_growth
+    FROM fundamentals
+)
+SELECT ticker, date, rev_growth
+FROM rev_growth
+WHERE date = '2025-06-30'
+ORDER BY rev_growth DESC
+LIMIT 10;
+
+
+
+-- Join fundamentals with returns
+SELECT f.ticker, f.date, f.revenue, r.quarterly_return
+FROM fundamentals f
+JOIN stock_returns r
+  ON f.ticker = r.ticker
+ AND f.date = r.date;
+
